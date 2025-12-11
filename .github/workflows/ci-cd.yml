@@ -35,7 +35,9 @@ jobs:
         if [ -f "./${{ matrix.service }}/Dockerfile" ]; then
           # --- Configuration ---
           OWNER=$(echo "${{ secrets.DOCKER_USERNAME }}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_NAME="$OWNER/${{ matrix.service }}"
+          # Sanitize service name (replace / with -) for Docker image name
+          SAFE_SERVICE_NAME=$(echo "${{ matrix.service }}" | tr '/' '-')
+          IMAGE_NAME="$OWNER/$SAFE_SERVICE_NAME"
           
           # Generate Short Git Commit SHA (e.g., a1b2c3d)
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
