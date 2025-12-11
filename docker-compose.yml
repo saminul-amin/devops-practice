@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - microservices-net
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:3847"
+    environment:
+      - PORT=3847
+      - MONGO_URI=mongodb://mongo:27017/ecom
+    depends_on:
+      - mongo
+    networks:
+      - microservices-net
+
+  analytics:
+    build: ./analytics-service
+    ports:
+      - "4001:4001"
+    networks:
+      - microservices-net
+
+  notification:
+    build: ./notification-service
+    ports:
+      - "4002:4002"
+    networks:
+      - microservices-net
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:5921"
+    networks:
+      - microservices-net
+    depends_on:
+      - backend
+      - analytics
+      - notification
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring-stack/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - microservices-net
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring-stack/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  mongo-data:

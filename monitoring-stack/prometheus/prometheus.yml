@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'analytics-service'
+    static_configs:
+      - targets: ['analytics:4001']
+
+  # Backend doesn't have metrics exposed by default in the provided code, 
+  # but if it did, it would be here. Added for completeness if user adds it later.
+  # - job_name: 'backend-service'
+  #   static_configs:
+  #     - targets: ['backend:5000']

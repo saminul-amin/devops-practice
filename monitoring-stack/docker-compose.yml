@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # --- 1. Prometheus Service ---
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      # Mount the custom config file into the container
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      # Ensure Prometheus uses the custom config file
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      # Expose Prometheus web UI on port 9090 (optional for Grafana, but useful for debugging)
+      - '9090:9090'
+
+  # --- 2. Grafana Service ---
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    ports:
+      # Expose Grafana web UI on port 3000
+      - '3000:3000'
+    restart: unless-stopped
+    # Grafana depends on Prometheus starting first
+    depends_on:
+      - prometheus

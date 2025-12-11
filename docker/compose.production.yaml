@@ -1,0 +1,52 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - backend-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: always
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      BACKEND_PORT: ${BACKEND_PORT}
+    depends_on:
+      - mongodb
+    networks:
+      - backend-network
+
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    restart: always
+    environment:
+      BACKEND_URL: http://backend:${BACKEND_PORT}
+      GATEWAY_PORT: ${GATEWAY_PORT}
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    depends_on:
+      - backend
+    networks:
+      - backend-network
+      - public-network
+
+networks:
+  backend-network:
+    internal: true
+  public-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
