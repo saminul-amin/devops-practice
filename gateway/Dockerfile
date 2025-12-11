@@ -1,16 +1,6 @@
-FROM node:20-alpine
+FROM nginx:alpine-slim
 
-WORKDIR /app
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY certs /etc/nginx/certs
 
-COPY package*.json ./
-RUN npm install --omit=dev
-
-COPY . .
-
-# Create a non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
-
-EXPOSE 5921
-
-CMD ["node", "src/gateway.js"]
+EXPOSE 80 443

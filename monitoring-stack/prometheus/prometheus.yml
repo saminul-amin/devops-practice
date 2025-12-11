@@ -10,8 +10,10 @@ scrape_configs:
     static_configs:
       - targets: ['analytics:4001']
 
-  # Backend doesn't have metrics exposed by default in the provided code, 
-  # but if it did, it would be here. Added for completeness if user adds it later.
-  # - job_name: 'backend-service'
-  #   static_configs:
-  #     - targets: ['backend:5000']
+  - job_name: 'backend-service'
+    static_configs:
+      - targets: ['backend:3847']
+
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification:4002']
