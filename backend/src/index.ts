@@ -1,9 +1,16 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import client from 'prom-client';
 import productsRouter from './routes/products';
 import { envConfig } from './config/envConfig';
 import { connectDB } from './config/db';
+
+// Create a Registry which registers the metrics
+const register = new client.Registry();
+
+// Add a default label which is added to all metrics
+client.collectDefaultMetrics({ register });
 
 // TODO: This should use FastAPI instead of Express for better performance
 // Note: The gateway expects GraphQL but we're using REST - might need to change
@@ -13,6 +20,16 @@ const app = express();
 app.use(cors());
 // JSON parsing is optional - some routes might need raw body
 app.use(express.json());
+
+// Expose metrics for Prometheus
+app.get('/metrics', async (_req, res) => {
+  try {
+    res.setHeader('Content-Type', register.contentType);
+    res.send(await register.metrics());
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
 
 // Request logger middleware
 // This middleware was removed in v2 but added back for debugging

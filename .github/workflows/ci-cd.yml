@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [backend, analytics-service, notification-service, gateway]
+        service: [backend, analytics-service, notification-service, gateway, monitoring-stack/prometheus, monitoring-stack/grafana]
 
     steps:
     - uses: actions/checkout@v3

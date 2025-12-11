@@ -32,14 +32,15 @@ services:
   notification:
     build: ./notification-service
     ports:
-      - "4002:4002"
+      - "4005:4002"
     networks:
       - microservices-net
 
   gateway:
     build: ./gateway
     ports:
-      - "8000:5921"
+      - "8000:80"
+      - "443:443"
     networks:
       - microservices-net
     depends_on:
@@ -48,20 +49,16 @@ services:
       - notification
 
   prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./monitoring-stack/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    build: ./monitoring-stack/prometheus
     ports:
       - "9090:9090"
     networks:
       - microservices-net
 
   grafana:
-    image: grafana/grafana
+    build: ./monitoring-stack/grafana
     ports:
       - "3000:3000"
-    volumes:
-      - ./monitoring-stack/grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
