@@ -1,0 +1,32 @@
+name: Microservices CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: [backend, analytics-service, notification-service, gateway]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker Image for ${{ matrix.service }}
+      run: |
+        if [ -f "./${{ matrix.service }}/Dockerfile" ]; then
+          docker build -t ${{ matrix.service }}:latest ./${{ matrix.service }}
+        else
+          echo "Dockerfile not found for ${{ matrix.service }}, skipping..."
+        fi
