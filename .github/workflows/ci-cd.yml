@@ -3,13 +3,14 @@ name: Microservices CI/CD
 on:
   push:
     branches: [ main ]
+    # 1. Trigger pipeline on git tags (e.g., v1.0.0)
+    tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         service: [backend, analytics-service, notification-service, gateway]
@@ -23,29 +24,58 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    # 1. Add Login Step
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # 2. Update Build & Push Logic
-    - name: Build and Push Docker Image for ${{ matrix.service }}
+    - name: Build and Push with Versioning for ${{ matrix.service }}
       run: |
         if [ -f "./${{ matrix.service }}/Dockerfile" ]; then
-          # Define the image name with the Docker Hub username
-          IMAGE_TAG="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:latest"
+          # --- Configuration ---
+          OWNER=$(echo "${{ secrets.DOCKER_USERNAME }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_NAME="$OWNER/${{ matrix.service }}"
           
-          echo "Building $IMAGE_TAG..."
-          docker build -t $IMAGE_TAG ./${{ matrix.service }}
+          # Generate Short Git Commit SHA (e.g., a1b2c3d)
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           
-          # Only push if this is not a pull request (optional safety check)
+          # Define Tags
+          TAG_SHA="$IMAGE_NAME:sha-$SHORT_SHA"
+          TAG_LATEST="$IMAGE_NAME:latest"
+          
+          echo "Building image for service: ${{ matrix.service }}"
+          
+          # 2. Build the image with the SHA tag first
+          docker build -t $TAG_SHA ./${{ matrix.service }}
+          
+          # --- Pushing Logic ---
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "Pushing $IMAGE_TAG..."
-            docker push $IMAGE_TAG
+            
+            # A. Always push the specific commit SHA (Good for history/rollbacks)
+            echo "Pushing SHA tag: $TAG_SHA"
+            docker push $TAG_SHA
+
+            # B. If running on 'main' branch, update 'latest' tag
+            if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              echo "Tagging and Pushing 'latest'..."
+              docker tag $TAG_SHA $TAG_LATEST
+              docker push $TAG_LATEST
+            fi
+
+            # C. If triggered by a Git Tag (e.g., v1.0.0), push that version
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+              # Extract version from ref (e.g., refs/tags/v1.0.0 -> v1.0.0)
+              VERSION_TAG="${{ github.ref_name }}"
+              TAG_VERSION="$IMAGE_NAME:$VERSION_TAG"
+              
+              echo "Tagging and Pushing Release Version: $TAG_VERSION"
+              docker tag $TAG_SHA $TAG_VERSION
+              docker push $TAG_VERSION
+            fi
+            
           else
-            echo "Skipping push for pull request..."
+            echo "Pull Request detected: Skipping push."
           fi
         else
           echo "Dockerfile not found for ${{ matrix.service }}, skipping..."
