@@ -23,10 +23,30 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Build Docker Image for ${{ matrix.service }}
+    # 1. Add Login Step
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    # 2. Update Build & Push Logic
+    - name: Build and Push Docker Image for ${{ matrix.service }}
       run: |
         if [ -f "./${{ matrix.service }}/Dockerfile" ]; then
-          docker build -t ${{ matrix.service }}:latest ./${{ matrix.service }}
+          # Define the image name with the Docker Hub username
+          IMAGE_TAG="${{ secrets.DOCKER_USERNAME }}/${{ matrix.service }}:latest"
+          
+          echo "Building $IMAGE_TAG..."
+          docker build -t $IMAGE_TAG ./${{ matrix.service }}
+          
+          # Only push if this is not a pull request (optional safety check)
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Pushing $IMAGE_TAG..."
+            docker push $IMAGE_TAG
+          else
+            echo "Skipping push for pull request..."
+          fi
         else
           echo "Dockerfile not found for ${{ matrix.service }}, skipping..."
         fi
